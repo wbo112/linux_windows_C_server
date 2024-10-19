@@ -22,10 +22,10 @@ int main() {
 		return -1;
 	}
 	std::cout << "sock  succ" << std::endl;
-//	sockaddr_in sin1 = {
-//sin1.sin_family = AF_INET,
-//sin1.sin_port = htons(4567),
-//sin1.sin_addr.S_un.S_addr = inet_addr("127.0.0.1") };
+	//	sockaddr_in sin1 = {
+	//sin1.sin_family = AF_INET,
+	//sin1.sin_port = htons(4567),
+	//sin1.sin_addr.S_un.S_addr = inet_addr("127.0.0.1") };
 	sockaddr_in sin = {
 
 	};
@@ -39,10 +39,19 @@ int main() {
 		std::cout << " connect fail" << std::endl;
 		return -1;
 	}
-	char recvBuf[256] = {};
-	int nLen = recv(sock, recvBuf, 256, 0);
-	if (nLen > 0) {
-		std::cout << "recvBuf" << recvBuf << std::endl;
+	while (true) {
+		char cmdBuf[128] = {};
+		std::cout << "sizeof " << sizeof cmdBuf << std::endl;
+		scanf("%s", cmdBuf);
+		send(sock, cmdBuf, strlen(cmdBuf) + 1, 0);
+		char recvBuf[128] = {};
+		int nLen = recv(sock, recvBuf, 128, 0);
+		if (nLen > 0) {
+			std::cout << "recvBuf" << recvBuf << std::endl;
+		}
+		else {
+			break;
+		}
 	}
 	closesocket(sock);
 	WSACleanup();

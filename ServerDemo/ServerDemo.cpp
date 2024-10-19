@@ -41,21 +41,31 @@ int main() {
 	}
 	std::cout << "listen succ" << std::endl;
 	SOCKET cSock = INVALID_SOCKET;
-	while (true) {
+	cSock = accept(sock, (sockaddr*)&clientAddr, &nAddrLen);
+	if (INVALID_SOCKET == cSock) {
+		std::cout << "accept fail" << std::endl;
 
-		cSock = accept(sock, (sockaddr*)&clientAddr, &nAddrLen);
-		if (INVALID_SOCKET == cSock) {
-			std::cout << "accept fail" << std::endl;
+	}
+	else {
+		std::cout << "accept succ" << std::endl;
+	}
+	std::cout << "new client ip = " << inet_ntoa(clientAddr.sin_addr) << std::endl;;
+	while (true) {
+	char recvBuf[128] = {};
+		int nLen = recv(cSock, recvBuf, 128, 0);
+		if (nLen <= 0) {
+			std::cout << "client exit" << std::endl;
 			break;
 		}
-		else {
-			std::cout << "accept succ" << std::endl;
+		if (0 == strcmp(recvBuf, "exit")) {
+			break; 
 		}
-		std::cout << "new client ip = " << inet_ntoa(clientAddr.sin_addr) << std::endl;;
+		std::cout << "recv data : " << recvBuf << std::endl;
 		char msgBuf[] = "Hello ,I'm Server.";
 		send(cSock, msgBuf, strlen(msgBuf) + 1, 0);
-		closesocket(cSock);
 	}
+	closesocket(cSock);
+	closesocket(sock);
 	WSACleanup();
 	return 0;
 }
