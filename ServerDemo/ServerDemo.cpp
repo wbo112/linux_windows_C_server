@@ -9,7 +9,38 @@
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 #define _CRT_SECURE_NO_WARNINGS
 
-//#pragma comment(lib,"ws2_32.lib") 
+#pragma comment(lib,"ws2_32.lib") 
+enum CMD {
+	CMD_LOGIN,
+	CMD_LOGINOUT,
+	CMD_ERR
+};
+struct DataPackage {
+	int age;
+	char name[128];
+};
+
+struct DataHeader {
+	short dataLength;
+	short cmd;
+};
+
+struct Login {
+	char userName[32];
+	char passWord[32];
+};
+struct LoginResult {
+	int result;
+
+};
+
+struct LoginOut {
+	char userName[32];
+};
+struct LoginOutResult {
+	int result;
+};
+
 int main() {
 	WORD ver = MAKEWORD(2, 2);
 	WSADATA dat;
@@ -51,18 +82,50 @@ int main() {
 	}
 	std::cout << "new client ip = " << inet_ntoa(clientAddr.sin_addr) << std::endl;;
 	while (true) {
-	char recvBuf[128] = {};
-		int nLen = recv(cSock, recvBuf, 128, 0);
+		DataHeader  header = {};
+		int nLen = recv(cSock, (char*)&header, sizeof(DataHeader), 0);
 		if (nLen <= 0) {
 			std::cout << "client exit" << std::endl;
 			break;
 		}
-		if (0 == strcmp(recvBuf, "exit")) {
-			break; 
+
+		std::cout << "recv data : " << header.cmd << " length = " << header.dataLength << std::endl;
+		switch (header.cmd) {
+		case CMD_LOGIN:
+		{
+
+			Login login = {};
+			recv(cSock, (CHAR*)&login, sizeof(Login), 0);
+			LoginResult loginResult = { 1 };
+
+			send(cSock, (char*)&header, sizeof(DataHeader), 0);
+			send(cSock, (char*)&loginResult, sizeof(LoginResult), 0);
 		}
-		std::cout << "recv data : " << recvBuf << std::endl;
-		char msgBuf[] = "Hello ,I'm Server.";
-		send(cSock, msgBuf, strlen(msgBuf) + 1, 0);
+		break;
+		case CMD_LOGINOUT:
+		{
+
+			LoginOut loginOut = {};
+			recv(cSock, (CHAR*)&loginOut, sizeof(LoginOut), 0);
+			LoginOutResult loginOutResult = { 1 };
+
+			send(cSock, (char*)&header, sizeof(DataHeader), 0);
+			send(cSock, (char*)&loginOutResult, sizeof(LoginOutResult), 0);
+		}
+		break;
+		default:
+		{
+
+			header.cmd = CMD_ERR;
+			header.dataLength = 0;
+			send(cSock, (char*)&header, sizeof(DataHeader), 0);
+
+			std::cout << "switch default" << std::endl;
+		}
+		}
+
+
+
 	}
 	closesocket(cSock);
 	closesocket(sock);

@@ -9,7 +9,14 @@
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 #define _CRT_SECURE_NO_WARNINGS
 
-//#pragma comment(lib,"ws2_32.lib") 
+#pragma comment(lib,"ws2_32.lib") 
+
+
+
+struct DataPackage {
+	int age;
+	char name[128];
+};
 int main() {
 	WORD ver = MAKEWORD(2, 2);
 	WSADATA dat;
@@ -45,9 +52,10 @@ int main() {
 		scanf("%s", cmdBuf);
 		send(sock, cmdBuf, strlen(cmdBuf) + 1, 0);
 		char recvBuf[128] = {};
-		int nLen = recv(sock, recvBuf, 128, 0);
+		int nLen = recv(sock, recvBuf, sizeof(recvBuf), 0);
 		if (nLen > 0) {
-			std::cout << "recvBuf" << recvBuf << std::endl;
+			DataPackage* dp = (DataPackage*)recvBuf;
+			std::cout << "age = " << dp->age << " , name = " << dp->name << std::endl;
 		}
 		else {
 			break;
