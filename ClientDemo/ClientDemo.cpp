@@ -11,12 +11,38 @@
 
 #pragma comment(lib,"ws2_32.lib") 
 
-
-
+enum CMD {
+	CMD_LOGIN,
+	CMD_LOGINOUT,
+	CMD_ERR
+};
 struct DataPackage {
 	int age;
 	char name[128];
 };
+
+struct DataHeader {
+	short dataLength;
+	short cmd;
+};
+
+struct Login {
+	char userName[32];
+	char passWord[32];
+};
+struct LoginResult {
+	int result;
+
+};
+
+struct LoginOut {
+	char userName[32];
+};
+struct LoginOutResult {
+	int result;
+};
+
+
 int main() {
 	WORD ver = MAKEWORD(2, 2);
 	WSADATA dat;
@@ -50,16 +76,39 @@ int main() {
 		char cmdBuf[128] = {};
 		std::cout << "sizeof " << sizeof cmdBuf << std::endl;
 		scanf("%s", cmdBuf);
-		send(sock, cmdBuf, strlen(cmdBuf) + 1, 0);
-		char recvBuf[128] = {};
-		int nLen = recv(sock, recvBuf, sizeof(recvBuf), 0);
-		if (nLen > 0) {
-			DataPackage* dp = (DataPackage*)recvBuf;
-			std::cout << "age = " << dp->age << " , name = " << dp->name << std::endl;
+		if (0 == strcmp(cmdBuf, "login")) {
+			Login login = { "lyd","pwd" };
+			DataHeader dataHeader = { sizeof(Login),CMD_LOGIN };
+			send(sock, (const char*)&dataHeader, sizeof(DataHeader), 0);
+			send(sock, (const char*)&login, sizeof(Login), 0);
+
+
+			DataHeader resultDataHeader = {};
+			LoginResult loginResult = {  };
+			recv(sock, (char*)&resultDataHeader, sizeof(DataHeader), 0);
+			recv(sock, (char*)&loginResult, sizeof(LoginResult), 0);
+			std::cout << "loginResult = " << loginResult.result << std::endl;
 		}
-		else {
+		else if (0 == strcmp(cmdBuf, "loginOut")) {
+			LoginOut loginOut = { "lyd" };
+			DataHeader dataHeader = { sizeof(LoginOut), CMD_LOGINOUT };
+			send(sock, (const char*)&dataHeader, sizeof(DataHeader), 0);
+			send(sock, (const char*)&loginOut, sizeof(LoginOut), 0);
+
+
+			DataHeader resultDataHeader = {};
+			LoginOutResult loginOutResult = { };
+			recv(sock, (char*)&resultDataHeader, sizeof(DataHeader), 0);
+			recv(sock, (char*)&loginOutResult, sizeof(LoginOutResult), 0);
+			std::cout << "loginOutResult = " << loginOutResult.result << std::endl;
+		}
+		else if (0 == strcmp(cmdBuf, "exit")) {
 			break;
 		}
+		else {
+
+		}
+
 	}
 	closesocket(sock);
 	WSACleanup();
