@@ -14,6 +14,8 @@
 enum CMD {
 	CMD_LOGIN,
 	CMD_LOGINOUT,
+	CMD_LOGIN_RESULT,
+	CMD_LOGINOUT_RESULT,
 	CMD_ERR
 };
 struct DataPackage {
@@ -26,22 +28,40 @@ struct DataHeader {
 	short cmd;
 };
 
-struct Login {
+struct Login :public DataHeader {
+
+	Login() {
+		dataLength = sizeof(Login);
+		cmd = CMD_LOGIN;
+	}
 	char userName[32];
 	char passWord[32];
 };
-struct LoginResult {
+struct LoginResult :public DataHeader {
+	LoginResult() {
+		dataLength = sizeof(LoginResult);
+		cmd = CMD_LOGIN_RESULT;
+		result = 0;
+	}
 	int result;
 
 };
 
-struct LoginOut {
+struct LoginOut :public DataHeader {
+	LoginOut() {
+		dataLength = sizeof(LoginOut);
+		cmd = CMD_LOGINOUT;
+	}
 	char userName[32];
 };
-struct LoginOutResult {
+struct LoginOutResult :public DataHeader {
+	LoginOutResult() {
+		dataLength = sizeof(LoginOutResult);
+		cmd = CMD_LOGINOUT_RESULT;
+		result = 0;
+	}
 	int result;
 };
-
 
 int main() {
 	WORD ver = MAKEWORD(2, 2);
@@ -77,28 +97,29 @@ int main() {
 		std::cout << "sizeof " << sizeof cmdBuf << std::endl;
 		scanf("%s", cmdBuf);
 		if (0 == strcmp(cmdBuf, "login")) {
-			Login login = { "lyd","pwd" };
-			DataHeader dataHeader = { sizeof(Login),CMD_LOGIN };
-			send(sock, (const char*)&dataHeader, sizeof(DataHeader), 0);
+			Login login = {  };
+			strcpy(login.userName, "lyd");
+			strcpy(login.passWord, "pwd");
+			std::cout << "send  = login" << std::endl;
 			send(sock, (const char*)&login, sizeof(Login), 0);
 
 
-			DataHeader resultDataHeader = {};
+
 			LoginResult loginResult = {  };
-			recv(sock, (char*)&resultDataHeader, sizeof(DataHeader), 0);
+
 			recv(sock, (char*)&loginResult, sizeof(LoginResult), 0);
 			std::cout << "loginResult = " << loginResult.result << std::endl;
 		}
 		else if (0 == strcmp(cmdBuf, "loginOut")) {
-			LoginOut loginOut = { "lyd" };
-			DataHeader dataHeader = { sizeof(LoginOut), CMD_LOGINOUT };
-			send(sock, (const char*)&dataHeader, sizeof(DataHeader), 0);
+			LoginOut loginOut = {  };
+
+			strcpy(loginOut.userName, "lyd");
+
 			send(sock, (const char*)&loginOut, sizeof(LoginOut), 0);
 
 
-			DataHeader resultDataHeader = {};
 			LoginOutResult loginOutResult = { };
-			recv(sock, (char*)&resultDataHeader, sizeof(DataHeader), 0);
+
 			recv(sock, (char*)&loginOutResult, sizeof(LoginOutResult), 0);
 			std::cout << "loginOutResult = " << loginOutResult.result << std::endl;
 		}

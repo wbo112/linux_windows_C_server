@@ -13,6 +13,8 @@
 enum CMD {
 	CMD_LOGIN,
 	CMD_LOGINOUT,
+	CMD_LOGIN_RESULT,
+	CMD_LOGINOUT_RESULT,
 	CMD_ERR
 };
 struct DataPackage {
@@ -25,19 +27,38 @@ struct DataHeader {
 	short cmd;
 };
 
-struct Login {
+struct Login :public DataHeader {
+
+	Login() {
+		dataLength = sizeof(Login);
+		cmd = CMD_LOGIN;
+	}
 	char userName[32];
 	char passWord[32];
 };
-struct LoginResult {
+struct LoginResult :public DataHeader {
+	LoginResult() {
+		dataLength = sizeof(LoginResult);
+		cmd = CMD_LOGIN_RESULT;
+		result = 0;
+	}
 	int result;
 
 };
 
-struct LoginOut {
+struct LoginOut :public DataHeader {
+	LoginOut() {
+		dataLength = sizeof(LoginOut);
+		cmd = CMD_LOGINOUT;
+	}
 	char userName[32];
 };
-struct LoginOutResult {
+struct LoginOutResult :public DataHeader {
+	LoginOutResult() {
+		dataLength = sizeof(LoginOutResult);
+		cmd = CMD_LOGINOUT_RESULT;
+		result = 0;
+	}
 	int result;
 };
 
@@ -82,23 +103,23 @@ int main() {
 	}
 	std::cout << "new client ip = " << inet_ntoa(clientAddr.sin_addr) << std::endl;;
 	while (true) {
-		DataHeader  header = {};
+		DataHeader  header;
 		int nLen = recv(cSock, (char*)&header, sizeof(DataHeader), 0);
 		if (nLen <= 0) {
 			std::cout << "client exit" << std::endl;
 			break;
 		}
 
-		std::cout << "recv data : " << header.cmd << " length = " << header.dataLength << std::endl;
 		switch (header.cmd) {
 		case CMD_LOGIN:
 		{
 
-			Login login = {};
-			recv(cSock, (CHAR*)&login, sizeof(Login), 0);
-			LoginResult loginResult = { 1 };
+			Login login;
+			recv(cSock, (CHAR*)&login + sizeof(DataHeader), sizeof(Login) - sizeof(DataHeader), 0);
+			std::cout << "recv data : " << login.cmd << " length = " << login.dataLength << " username = " << login.userName << " password = " << login.passWord << std::endl;
+			LoginResult loginResult;
 
-			send(cSock, (char*)&header, sizeof(DataHeader), 0);
+			//send(cSock, (char*)&header, sizeof(DataHeader), 0);
 			send(cSock, (char*)&loginResult, sizeof(LoginResult), 0);
 		}
 		break;
@@ -106,10 +127,11 @@ int main() {
 		{
 
 			LoginOut loginOut = {};
-			recv(cSock, (CHAR*)&loginOut, sizeof(LoginOut), 0);
-			LoginOutResult loginOutResult = { 1 };
+			recv(cSock, (CHAR*)&loginOut + sizeof(DataHeader), sizeof(LoginOut) - sizeof(DataHeader), 0);
+			std::cout << "recv data : " << loginOut.cmd << " length = " << loginOut.dataLength << " username = " << loginOut.userName << std::endl;
+			LoginOutResult loginOutResult = {};
+			loginOutResult.result = 1;
 
-			send(cSock, (char*)&header, sizeof(DataHeader), 0);
 			send(cSock, (char*)&loginOutResult, sizeof(LoginOutResult), 0);
 		}
 		break;
