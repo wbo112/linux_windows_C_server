@@ -16,6 +16,7 @@ enum CMD {
 	CMD_LOGINOUT,
 	CMD_LOGIN_RESULT,
 	CMD_LOGINOUT_RESULT,
+	CMD_NEW_USER_JOIN,
 	CMD_ERR
 };
 struct DataPackage {
@@ -62,7 +63,58 @@ struct LoginOutResult :public DataHeader {
 	}
 	int result;
 };
+struct NewUserJoin :public DataHeader {
+	NewUserJoin() {
+		dataLength = sizeof(NewUserJoin);
+		cmd = CMD_NEW_USER_JOIN;
+		result = 0;
+	}
+	int result;
+};
 
+int processor(SOCKET cSock) {
+	char szRecv[1024] = {};
+	int nLen = recv(cSock, (char*)szRecv, sizeof(DataHeader), 0);
+
+	DataHeader* header = (DataHeader*)szRecv;
+	if (nLen <= 0) {
+		std::cout << "server break, client exit" << std::endl;
+		return -1;
+	}
+	if (nLen >= sizeof(DataHeader)) {
+
+	}
+
+	switch (header->cmd) {
+	case CMD_LOGIN_RESULT:
+	{
+		recv(cSock, szRecv + sizeof(DataHeader), header->dataLength - sizeof(DataHeader), 0);
+		LoginResult* loginResult = (LoginResult*)szRecv;
+		std::cout << " CMD_LOGIN_RESULT recv data : " << loginResult->cmd << " length = " << loginResult->dataLength << " result = " << loginResult->result << std::endl;
+
+	}
+	break;
+	case CMD_LOGINOUT:
+	{
+		recv(cSock, szRecv + sizeof(DataHeader), header->dataLength - sizeof(DataHeader), 0);
+		LoginOutResult* loginOutResult = (LoginOutResult*)szRecv;
+		std::cout << " CMD_LOGINOUT recv data : " << loginOutResult->cmd << " length = " << loginOutResult->dataLength << " result = " << loginOutResult->result << std::endl;
+	}
+	break;
+	case CMD_NEW_USER_JOIN:
+	{
+		recv(cSock, szRecv + sizeof(DataHeader), header->dataLength - sizeof(DataHeader), 0);
+		NewUserJoin* newUserJoin = (NewUserJoin*)szRecv;
+		std::cout << " CMD_NEW_USER_JOIN recv data : " << newUserJoin->cmd << " length = " << newUserJoin->dataLength << " result = " << newUserJoin->result << std::endl;
+	}
+	break;
+	default:
+	{
+
+	}
+	return 0;
+	}
+}
 int main() {
 	WORD ver = MAKEWORD(2, 2);
 	WSADATA dat;
@@ -93,42 +145,30 @@ int main() {
 		return -1;
 	}
 	while (true) {
-		char cmdBuf[128] = {};
-		std::cout << "sizeof " << sizeof cmdBuf << std::endl;
-		scanf("%s", cmdBuf);
-		if (0 == strcmp(cmdBuf, "login")) {
-			Login login = {  };
-			strcpy(login.userName, "lyd");
-			strcpy(login.passWord, "pwd");
-			std::cout << "send  = login" << std::endl;
-			send(sock, (const char*)&login, sizeof(Login), 0);
-
-
-
-			LoginResult loginResult = {  };
-
-			recv(sock, (char*)&loginResult, sizeof(LoginResult), 0);
-			std::cout << "loginResult = " << loginResult.result << std::endl;
+		fd_set readFd;
+		FD_ZERO(&readFd);
+		FD_SET(sock, &readFd);
+		timeval t = { 1,0 };
+		int ret = select(sock, &readFd, 0, 0, &t);
+		if (ret < 0) {
+			std::cout << "select fail" << std::endl;
 		}
-		else if (0 == strcmp(cmdBuf, "loginOut")) {
-			LoginOut loginOut = {  };
 
-			strcpy(loginOut.userName, "lyd");
-
-			send(sock, (const char*)&loginOut, sizeof(LoginOut), 0);
-
-
-			LoginOutResult loginOutResult = { };
-
-			recv(sock, (char*)&loginOutResult, sizeof(LoginOutResult), 0);
-			std::cout << "loginOutResult = " << loginOutResult.result << std::endl;
+		if (FD_ISSET(sock, &readFd)) {
+			FD_CLR(sock, &readFd);
+			if (-1 == processor(sock)) {
+				std::cout << "select err" << std::endl;
+				break;
+			}
 		}
-		else if (0 == strcmp(cmdBuf, "exit")) {
-			break;
-		}
-		else {
+		std::cout << "idle process business" << std::endl;
+		Login login;
+		strcpy(login.userName, "lyd");
+		strcpy(login.passWord, "pwd");
+		send(sock, (const char*)&login, sizeof(Login), 0);
+		Sleep(1000);
 
-		}
+
 
 	}
 	closesocket(sock);

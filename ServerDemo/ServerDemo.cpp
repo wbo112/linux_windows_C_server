@@ -15,6 +15,7 @@ enum CMD {
 	CMD_LOGINOUT,
 	CMD_LOGIN_RESULT,
 	CMD_LOGINOUT_RESULT,
+	CMD_NEW_USER_JOIN,
 	CMD_ERR
 };
 struct DataPackage {
@@ -57,6 +58,15 @@ struct LoginOutResult :public DataHeader {
 	LoginOutResult() {
 		dataLength = sizeof(LoginOutResult);
 		cmd = CMD_LOGINOUT_RESULT;
+		result = 0;
+	}
+	int result;
+};
+
+struct NewUserJoin :public DataHeader {
+	NewUserJoin() {
+		dataLength = sizeof(NewUserJoin);
+		cmd = CMD_NEW_USER_JOIN;
 		result = 0;
 	}
 	int result;
@@ -167,7 +177,8 @@ int main() {
 				max_fd = socket_set[n];
 			}
 		}
-		int ret = select(max_fd + 1, &readFd, &writeFd, &expFd, NULL);
+		timeval t = { 0,0 };
+		int ret = select(max_fd + 1, &readFd, &writeFd, &expFd, &t);
 		if (ret < 0) {
 			std::cout << "select fail " << std::endl;
 			break;
@@ -186,6 +197,10 @@ int main() {
 				std::cout << "accept fail" << std::endl;
 			}
 			std::cout << "new socket add" << std::endl;
+			for (size_t n = 0; n < socket_set.size(); n++) {
+				NewUserJoin newUserJoin = {};
+				send(socket_set[n], (const char*)&newUserJoin, sizeof(NewUserJoin), 0);
+			}
 			socket_set.push_back(sock_client);
 		}
 		for (size_t n = 0; n < readFd.fd_count; n++) {
