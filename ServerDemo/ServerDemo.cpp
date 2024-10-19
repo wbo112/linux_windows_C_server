@@ -103,20 +103,23 @@ int main() {
 	}
 	std::cout << "new client ip = " << inet_ntoa(clientAddr.sin_addr) << std::endl;;
 	while (true) {
-		DataHeader  header;
-		int nLen = recv(cSock, (char*)&header, sizeof(DataHeader), 0);
+		char szRecv[1024] = {}; 
+		int nLen = recv(cSock, (char*)szRecv, sizeof(DataHeader), 0);
+		DataHeader*  header=(DataHeader*)szRecv ;
 		if (nLen <= 0) {
 			std::cout << "client exit" << std::endl;
 			break;
 		}
+		if (nLen >= sizeof(DataHeader)) {
 
-		switch (header.cmd) {
+		}
+		switch (header->cmd) {
 		case CMD_LOGIN:
 		{
 
-			Login login;
-			recv(cSock, (CHAR*)&login + sizeof(DataHeader), sizeof(Login) - sizeof(DataHeader), 0);
-			std::cout << "recv data : " << login.cmd << " length = " << login.dataLength << " username = " << login.userName << " password = " << login.passWord << std::endl;
+			recv(cSock, szRecv + sizeof(DataHeader), header->dataLength - sizeof(DataHeader), 0);
+			Login* login=(Login*)szRecv;
+			std::cout << "recv data : " << login->cmd << " length = " << login->dataLength << " username = " << login->userName << " password = " << login->passWord << std::endl;
 			LoginResult loginResult;
 
 			//send(cSock, (char*)&header, sizeof(DataHeader), 0);
@@ -126,9 +129,9 @@ int main() {
 		case CMD_LOGINOUT:
 		{
 
-			LoginOut loginOut = {};
-			recv(cSock, (CHAR*)&loginOut + sizeof(DataHeader), sizeof(LoginOut) - sizeof(DataHeader), 0);
-			std::cout << "recv data : " << loginOut.cmd << " length = " << loginOut.dataLength << " username = " << loginOut.userName << std::endl;
+			recv(cSock, szRecv + sizeof(DataHeader), header->dataLength - sizeof(DataHeader), 0);
+			LoginOut* loginOut=(LoginOut*)szRecv;
+			std::cout << "recv data : " << loginOut->cmd << " length = " << loginOut->dataLength << " username = " << loginOut->userName << std::endl;
 			LoginOutResult loginOutResult = {};
 			loginOutResult.result = 1;
 
@@ -137,7 +140,7 @@ int main() {
 		break;
 		default:
 		{
-
+			DataHeader header;
 			header.cmd = CMD_ERR;
 			header.dataLength = 0;
 			send(cSock, (char*)&header, sizeof(DataHeader), 0);
