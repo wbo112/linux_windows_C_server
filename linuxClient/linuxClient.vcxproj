@@ -79,6 +79,8 @@
     <ClCompile Include="threadtest.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="MessageHeader.hpp" />
+    <ClInclude Include="TcpClient.hpp" />
   </ItemGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Link>

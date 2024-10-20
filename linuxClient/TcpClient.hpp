@@ -1,4 +1,5 @@
-
+#pragma once
+#pragma once
 #ifndef TCP_CLIENT_HPP
 #define TCP_CLIENT_HPP
 #ifdef  _WIN32
