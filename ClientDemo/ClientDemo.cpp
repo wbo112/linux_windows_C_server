@@ -194,7 +194,7 @@ int main() {
 	sin.sin_family = AF_INET;
 	sin.sin_port = htons(4567);
 #ifdef  _WIN32
-	sin.sin_addr.S_un.S_addr = inet_addr("192.168.68.113");
+	sin.sin_addr.S_un.S_addr = inet_addr("192.168.68.122");
 #else
 	sin.sin_addr.s_addr = inet_addr("192.168.68.113");
 
