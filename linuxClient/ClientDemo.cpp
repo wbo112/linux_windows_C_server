@@ -225,11 +225,11 @@ int main() {
 				break;
 			}
 		}
-		//std::cout << "idle process business" << std::endl;
-		//Login login;
-		//strcpy(login.userName, "lyd");
-		//strcpy(login.passWord, "pwd");
-		//send(sock, (const char*)&login, sizeof(Login), 0);
+		std::cout << "idle process business" << std::endl;
+		Login login;
+		strcpy(login.userName, "lyd");
+		strcpy(login.passWord, "pwd");
+		send(sock, (const char*)&login, sizeof(Login), 0);
 #ifdef  _WIN32
 		Sleep(1000);
 #else

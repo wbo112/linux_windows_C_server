@@ -1,10 +1,16 @@
 ﻿
+#ifdef  _WIN32
+
+
 #include<WinSock2.h>
 #include <Windows.h>
+#include< ws2tcpip.h >
+#else
+#include <unistd.h>
+#endif //  _WIN32
 #include <stdlib.h>
 #include <iostream>
 #include <stdio.h>
-#include< ws2tcpip.h >
 
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 #define _CRT_SECURE_NO_WARNINGS
