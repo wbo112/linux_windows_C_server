@@ -188,25 +188,25 @@ int main() {
 	//sin1.sin_family = AF_INET,
 	//sin1.sin_port = htons(4567),
 	//sin1.sin_addr.S_un.S_addr = inet_addr("127.0.0.1") };
-	sockaddr_in sin = {
-
-	};
-	sin.sin_family = AF_INET;
-	sin.sin_port = htons(4567);
-#ifdef  _WIN32
-	sin.sin_addr.S_un.S_addr = inet_addr("192.168.68.122");
-#else
-	sin.sin_addr.s_addr = inet_addr("192.168.68.113");
-
-#endif //  _WIN32
-
-	//std::cout << sin1.sin_addr.S_un.S_addr << std::endl;
-	//std::cout << sin.sin_addr.S_un.S_addr << std::endl;
-	int ret = connect(sock, (sockaddr*)&sin, sizeof(sockaddr_in));
-	if (SOCKET_ERROR == ret) {
-		std::cout << " connect fail" << std::endl;
-		return -1;
-	}
+//	sockaddr_in sin = {
+//
+//	};
+//	sin.sin_family = AF_INET;
+//	sin.sin_port = htons(4567);
+//#ifdef  _WIN32
+//	sin.sin_addr.S_un.S_addr = inet_addr("192.168.68.122");
+//#else
+//	sin.sin_addr.s_addr = inet_addr("192.168.68.113");
+//
+//#endif //  _WIN32
+//
+//	//std::cout << sin1.sin_addr.S_un.S_addr << std::endl;
+//	//std::cout << sin.sin_addr.S_un.S_addr << std::endl;
+//	int ret = connect(sock, (sockaddr*)&sin, sizeof(sockaddr_in));
+//	if (SOCKET_ERROR == ret) {
+//		std::cout << " connect fail" << std::endl;
+//		return -1;
+//	}
 	std::thread t1(cmdThread, sock);
 	while (!stop) {
 		fd_set readFd;
