@@ -25,7 +25,7 @@
 
 
 void cmdThread(EsayTcpClient* tcpClient) {
-	while (true) {
+	while (tcpClient->isRun()) {
 
 
 		char cmdBuf[256] = {};
@@ -65,15 +65,20 @@ void cmdThread(EsayTcpClient* tcpClient) {
 			std::cout << "no support cmd" << std::endl;
 		}
 	}
+	std::cout << "thread  exit" << std::endl;
 }
 
 int main() {
 	EsayTcpClient tcpClient = {};
 	tcpClient.initSocket();
-	tcpClient.conn("127.0.0.1", 4567);
+	tcpClient.conn("192.168.68.122", 4567);
 	std::thread t1(cmdThread, &tcpClient);
 	while (tcpClient.isRun()) {
-		tcpClient.onRun();
+		bool isRun=tcpClient.onRun();
+		if (!isRun) {
+			tcpClient.setRun(false);
+			break;
+		}
 	}
 	if (t1.joinable()) {
 

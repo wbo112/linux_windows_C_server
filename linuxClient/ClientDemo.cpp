@@ -70,7 +70,7 @@ void cmdThread(EsayTcpClient* tcpClient) {
 int main() {
 	EsayTcpClient tcpClient = {};
 	tcpClient.initSocket();
-	tcpClient.conn("192.168.68.113", 4567);
+	tcpClient.conn("192.168.68.122", 4567);
 	std::thread t1(cmdThread, &tcpClient);
 	while (tcpClient.isRun()) {
 		tcpClient.onRun();

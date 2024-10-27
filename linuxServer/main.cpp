@@ -137,7 +137,7 @@ int processor(SOCKET cSock) {
 	return 0;
 	}
 }
-int main() {
+int main0() {
 
 #ifdef  _WIN32
 

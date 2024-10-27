@@ -1,4 +1,4 @@
-﻿
+
 
 #include "TcpServer.hpp"
 
@@ -11,7 +11,7 @@ int main() {
 
 	while (easyTcpServer.isRun()) {
 		easyTcpServer.onRun();
-		}
+	}
 	easyTcpServer.closeClient2All();
 	easyTcpServer.closeServer();
 

@@ -16,8 +16,15 @@ struct DataPackage {
 };
 
 struct DataHeader {
+
+
+
 	short dataLength;
 	short cmd;
+
+	DataHeader() :dataLength(sizeof(DataHeader)),cmd(CMD_ERR) {
+
+	}
 };
 
 struct Login :public DataHeader {
@@ -28,6 +35,7 @@ struct Login :public DataHeader {
 	}
 	char userName[32];
 	char passWord[32];
+	char data[932];
 };
 struct LoginResult :public DataHeader {
 	LoginResult() {
@@ -36,6 +44,7 @@ struct LoginResult :public DataHeader {
 		result = 0;
 	}
 	int result;
+	char data[992];
 
 };
 

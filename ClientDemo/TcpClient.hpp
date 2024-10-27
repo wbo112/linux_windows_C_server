@@ -22,6 +22,11 @@
 #include <stdio.h>
 #include <thread>
 #include "MessageHeader.hpp"
+
+#ifndef RECV_BUF_SIZE
+#define RECV_BUF_SIZE 409600
+#endif // !RECV_BUF_SIZE
+
 class EsayTcpClient {
 	SOCKET sock;
 	bool run;
@@ -52,6 +57,9 @@ public:
 			std::cout << "sock  succ" << std::endl;
 			return 0;
 		}
+	}
+	void setRun(bool run) {
+		this->run = run;
 	}
 	bool isRun() {
 		return run;
@@ -120,11 +128,15 @@ public:
 					return false;
 				}
 			}
-			//std::cout << "idle process business" << std::endl;
-			//Login login;
-			//strcpy(login.userName, "lyd");
-			//strcpy(login.passWord, "pwd");
-			//send(sock, (const char*)&login, sizeof(Login), 0);
+			std::cout << "idle process business" << std::endl;
+			while(true){
+
+				Login login;
+				strcpy(login.userName, "lyd");
+				strcpy(login.passWord, "pwd");
+				send(sock, (const char*)&login, sizeof(Login), 0);
+				recvData();
+			}
 #ifdef  _WIN32
 			Sleep(1000);
 #else
@@ -134,26 +146,36 @@ public:
 
 
 		}
+		return false;
 	}
 
 	// 接收数据
 	int recvData() {
 		std::cout << "thread start" << std::endl;
-		char szRecv[1024] = {};
-		int nLen = recv(sock, (char*)szRecv, sizeof(DataHeader), 0);
+
+		int nLen = recv(sock, (char*)szRecv, sizeof(szRecv), 0);
 
 		DataHeader* header = (DataHeader*)szRecv;
 		if (nLen <= 0) {
 			std::cout << "server break, client exit" << std::endl;
 			return -1;
 		}
-		if (nLen >= sizeof(DataHeader)) {
+		memcpy(msgBuf + msgBufIndex, szRecv, nLen);
+		msgBufIndex += nLen;
+		while (msgBufIndex >= sizeof(DataHeader)) {
+			DataHeader* header = (DataHeader*)(msgBuf);
+			if (msgBufIndex >= header->dataLength) {
 
+				//recv(sock, szRecv + sizeof(DataHeader), header->dataLength - sizeof(DataHeader), 0);
+				onNetData(header);
+				int  nSize = msgBufIndex - header->dataLength;
+				memcpy(msgBuf, msgBuf + header->dataLength, nSize);
+				msgBufIndex = nSize;
+			}
+			else {
+				break;
+			}
 		}
-
-		recv(sock, szRecv + sizeof(DataHeader), header->dataLength - sizeof(DataHeader), 0);
-
-		onNetData(header);
 
 
 
@@ -199,7 +221,9 @@ public:
 		return SOCKET_ERROR;
 	}
 private:
-
+	char szRecv[RECV_BUF_SIZE] = {};
+	char* msgBuf = new char[RECV_BUF_SIZE * 10] {};
+	int msgBufIndex = 0;
 
 
 };

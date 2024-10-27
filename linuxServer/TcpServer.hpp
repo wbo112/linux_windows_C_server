@@ -24,7 +24,7 @@
 #include <stdio.h>
 #include <thread>
 #include <vector>
-#include <ranges>
+//#include <ranges>
 #include "MessageHeader.hpp"
 
 
@@ -99,12 +99,10 @@ public:
 		else {
 			sin.sin_addr.S_un.S_addr = INADDR_ANY;
 		}
-#else{
+#else
 		if (ip) {
 			sin.sin_addr.s_addr = inet_addr(ip);
-		};
-		}
-else {
+		}else {
 			sin.sin_addr.s_addr = INADDR_ANY;
 			}
 #endif
@@ -127,7 +125,7 @@ else {
 			closesocket(serverSock);
 			WSACleanup();
 #else
-			close(sockserverSock);
+			close(serverSock);
 #endif
 			run = false;
 
@@ -190,23 +188,23 @@ else {
 			acc();
 
 		}
-	/*	for (auto it = client_set.begin(); it < client_set.end(); it++) {
-			std::cout << "a clientSock lastPost = " << (*it)->getLastPos() << std::endl;
-		}*/
+		/*	for (auto it = client_set.begin(); it < client_set.end(); it++) {
+				std::cout << "a clientSock lastPost = " << (*it)->getLastPos() << std::endl;
+			}*/
 
 		auto it = client_set.begin();
 		while (it != client_set.end()) {
 			if (FD_ISSET((*it)->getSockefd(), &readFd) && -1 == recvData((*it))) {
-		/*		for (auto ita = client_set.begin(); ita < client_set.end(); ita++) {
-					std::cout << "b clientSock lastPost = " << (*ita)->getLastPos() << std::endl;
-				}*/
+				/*		for (auto ita = client_set.begin(); ita < client_set.end(); ita++) {
+							std::cout << "b clientSock lastPost = " << (*ita)->getLastPos() << std::endl;
+						}*/
 				std::cout << "socket = " << *it << "  exit  " << std::endl;
 				delete* it;
-				 it = client_set.erase(it);  // 移除当前元素并更新迭代器
-			/*	 for (auto ita = client_set.begin(); ita < client_set.end(); ita++) {
-					 std::cout << "b clientSock lastPost = " << (*ita)->getLastPos() << std::endl;
-				 }*/
-				
+				it = client_set.erase(it);  // 移除当前元素并更新迭代器
+				/*	 for (auto ita = client_set.begin(); ita < client_set.end(); ita++) {
+						 std::cout << "b clientSock lastPost = " << (*ita)->getLastPos() << std::endl;
+					 }*/
+
 			}
 			else {
 				++it;  // 移动到下一个元素
@@ -249,7 +247,7 @@ else {
 	int recvData(ClientSocket* clientSock) {
 		//char* szRecv = new char[RECV_BUF_SIZE];
 		//std::cout << "a lastPos = " << clientSock->getLastPos() << std::endl;
-		char szRecv[RECV_BUF_SIZE/10] = {};
+		char szRecv[RECV_BUF_SIZE / 10] = {};
 		int nLen = recv(clientSock->getSockefd(), szRecv, sizeof(szRecv), 0);
 		//std::cout << "c lastPos = " << clientSock->getLastPos() << std::endl;
 		if (nLen <= 0) {
@@ -272,12 +270,12 @@ else {
 		while (clientSock->getLastPos() >= sizeof(DataHeader)) {
 			DataHeader* header = (DataHeader*)clientSock->getMsgBuf();
 			if (clientSock->getLastPos() >= header->dataLength) {
-				
+
 				int  nSize = clientSock->getLastPos() - header->dataLength;
 				//recv(sock, szRecv + sizeof(DataHeader), header->dataLength - sizeof(DataHeader), 0);
-				onNetMsg(clientSock->getSockefd(),header);
+				onNetMsg(clientSock->getSockefd(), header);
 				memcpy(clientSock->getMsgBuf(), clientSock->getMsgBuf() + header->dataLength, nSize);
-				
+
 				clientSock->setLastPos(nSize);
 			}
 			else {
@@ -290,7 +288,7 @@ else {
 
 		std::cout << "thread end" << std::endl;
 		//delete szRecv;
-	
+
 	}
 
 	int onNetMsg(SOCKET clientSock, DataHeader* header) {
