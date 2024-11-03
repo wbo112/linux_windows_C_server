@@ -21,6 +21,7 @@
 #include <iostream>
 #include <stdio.h>
 #include <thread>
+#include <vector>
 #include "TcpClient.hpp"
 
 
@@ -68,13 +69,13 @@ void cmdThread(EsayTcpClient* tcpClient) {
 	std::cout << "thread  exit" << std::endl;
 }
 
-int main() {
+void sendThread(int id) {
 	EsayTcpClient tcpClient = {};
 	tcpClient.initSocket();
-	tcpClient.conn("192.168.68.122", 4567);
+	tcpClient.conn("192.168.68.113", 4567);
 	std::thread t1(cmdThread, &tcpClient);
 	while (tcpClient.isRun()) {
-		bool isRun=tcpClient.onRun();
+		bool isRun = tcpClient.onRun();
 		if (!isRun) {
 			tcpClient.setRun(false);
 			break;
@@ -85,6 +86,22 @@ int main() {
 		t1.join();
 	}
 	tcpClient.clo();
+}
+
+int main() {
+	sendThread(1);
+	//const int  cCount = 100;
+	//std::vector<std::thread> v;
+	//for (int n = 0; n < cCount; n++) {
+	//	std::thread t1();
+	//	v.emplace_back(sendThread, n);
+	//}
+	//for (auto& t : v) {
+	//	if (t.joinable()) {
+	//		t.join();
+	//	}
+	//}
+	
 
 	return 0;
 }

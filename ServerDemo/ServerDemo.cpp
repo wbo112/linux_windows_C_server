@@ -8,6 +8,7 @@ int main() {
 	easyTcpServer.init();
 	easyTcpServer.bindd(nullptr, 4567);
 	easyTcpServer.list();
+	easyTcpServer.start_s();
 
 	while (easyTcpServer.isRun()) {
 		easyTcpServer.onRun();

@@ -135,7 +135,9 @@ public:
 				strcpy(login.userName, "lyd");
 				strcpy(login.passWord, "pwd");
 				send(sock, (const char*)&login, sizeof(Login), 0);
-				recvData();
+				if (-1 == recvData()) {
+					return false;
+				}
 			}
 #ifdef  _WIN32
 			Sleep(1000);
@@ -151,7 +153,7 @@ public:
 
 	// 接收数据
 	int recvData() {
-		std::cout << "thread start" << std::endl;
+		//std::cout << "thread start" << std::endl;
 
 		int nLen = recv(sock, (char*)szRecv, sizeof(szRecv), 0);
 
@@ -180,7 +182,7 @@ public:
 
 
 
-		std::cout << "thread end" << std::endl;
+		//std::cout << "thread end" << std::endl;
 		return 0;
 	}
 	void onNetData(DataHeader* header) {
@@ -188,7 +190,7 @@ public:
 		case CMD_LOGIN_RESULT:
 		{
 			LoginResult* loginResult = (LoginResult*)header;
-			std::cout << " CMD_LOGIN_RESULT recv data : " << loginResult->cmd << " length = " << loginResult->dataLength << " result = " << loginResult->result << std::endl;
+			//std::cout << " CMD_LOGIN_RESULT recv data : " << loginResult->cmd << " length = " << loginResult->dataLength << " result = " << loginResult->result << std::endl;
 
 		}
 		break;
@@ -196,14 +198,14 @@ public:
 		{
 
 			LoginOutResult* loginOutResult = (LoginOutResult*)header;
-			std::cout << " CMD_LOGINOUT recv data : " << loginOutResult->cmd << " length = " << loginOutResult->dataLength << " result = " << loginOutResult->result << std::endl;
+			//std::cout << " CMD_LOGINOUT recv data : " << loginOutResult->cmd << " length = " << loginOutResult->dataLength << " result = " << loginOutResult->result << std::endl;
 		}
 		break;
 		case CMD_NEW_USER_JOIN:
 		{
 
 			NewUserJoin* newUserJoin = (NewUserJoin*)header;
-			std::cout << " CMD_NEW_USER_JOIN recv data : " << newUserJoin->cmd << " length = " << newUserJoin->dataLength << " result = " << newUserJoin->result << std::endl;
+			//std::cout << " CMD_NEW_USER_JOIN recv data : " << newUserJoin->cmd << " length = " << newUserJoin->dataLength << " result = " << newUserJoin->result << std::endl;
 		}
 		break;
 		default:

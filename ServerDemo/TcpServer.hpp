@@ -18,14 +18,17 @@
 #define INVALID_SOCKET  (SOCKET)(~0)
 #define SOCKET_ERROR            (-1)
 #endif
-
+#define  THREAD_COUNT 8
 #include <stdlib.h>
 #include <iostream>
 #include <stdio.h>
 #include <thread>
 #include <vector>
 #include <ranges>
+#include <mutex>
+#include<atomic>
 #include "MessageHeader.hpp"
+#include "CELLTimestamp.hpp"
 
 
 
@@ -62,12 +65,232 @@ public:
 
 
 };
+
+class CellServer {
+public:
+	CellServer(SOCKET sock = INVALID_SOCKET) :serverSock(sock), p_thread(nullptr) {
+
+
+	}
+	int onRun() {
+		while (isRun()) {
+
+
+			if (clientsBuf.size() > 0) {
+				std::lock_guard<std::mutex> lock(s_mutex);
+				for (auto clientSock : clientsBuf) {
+					client_set.push_back(clientSock);
+				}
+				clientsBuf.clear();
+			}
+			if (client_set.empty()) {
+				std::chrono::milliseconds t(1);
+				continue;
+			}
+			fd_set readFd;
+			fd_set writeFd;
+			fd_set expFd;
+			FD_ZERO(&readFd);
+			FD_ZERO(&writeFd);
+			FD_ZERO(&expFd);
+
+			FD_SET(serverSock, &readFd);
+			FD_SET(serverSock, &writeFd);
+			FD_SET(serverSock, &expFd);
+			for (size_t n = 0; n < client_set.size(); n++) {
+				FD_SET(client_set[n]->getSockefd(), &readFd);
+			}
+			int max_fd = client_set[0]->getSockefd(); // 初始化最大文件描述符为监听socket
+			// 遍历socket_set，更新最大文件描述符
+			for (size_t n = 0; n < client_set.size(); n++) {
+				if (client_set[n]->getSockefd() > max_fd) {
+					max_fd = client_set[n]->getSockefd();
+				}
+			}
+			timeval t = { 10,0 };
+			int ret = select(max_fd + 1, &readFd, &writeFd, &expFd, &t);
+			if (ret < 0) {
+				std::cout << "select fail " << std::endl;
+				return -1;
+			}
+
+
+			/*	for (auto it = client_set.begin(); it < client_set.end(); it++) {
+					std::cout << "a clientSock lastPost = " << (*it)->getLastPos() << std::endl;
+				}*/
+
+			auto it = client_set.begin();
+			while (it != client_set.end()) {
+				if (FD_ISSET((*it)->getSockefd(), &readFd) && -1 == recvData((*it))) {
+					/*		for (auto ita = client_set.begin(); ita < client_set.end(); ita++) {
+								std::cout << "b clientSock lastPost = " << (*ita)->getLastPos() << std::endl;
+							}*/
+					std::cout << "socket = " << *it << "  exit  " << std::endl;
+					delete* it;
+					it = client_set.erase(it);  // 移除当前元素并更新迭代器
+					/*	 for (auto ita = client_set.begin(); ita < client_set.end(); ita++) {
+							 std::cout << "b clientSock lastPost = " << (*ita)->getLastPos() << std::endl;
+						 }*/
+
+				}
+				else {
+					++it;  // 移动到下一个元素
+				}
+			}
+
+
+
+		}
+
+	};
+	bool isRun() {
+		return true;
+	}
+	int recvData(ClientSocket* clientSock) {
+		//char* szRecv = new char[RECV_BUF_SIZE];
+		//std::cout << "a lastPos = " << clientSock->getLastPos() << std::endl;
+		char szRecv[RECV_BUF_SIZE / 10] = {};
+		int nLen = recv(clientSock->getSockefd(), szRecv, sizeof(szRecv), 0);
+		//std::cout << "c lastPos = " << clientSock->getLastPos() << std::endl;
+		if (nLen <= 0) {
+			std::cout << "client exit, socket fd = " << clientSock->getSockefd() << std::endl;
+
+			return -1;
+		}
+		if (nLen >= sizeof(DataHeader)) {
+
+		}
+		memcpy(clientSock->getMsgBuf() + clientSock->getLastPos(), szRecv, nLen);
+		/*recv(clientSock, szRecv + sizeof(DataHeader), header->dataLength - sizeof(DataHeader), 0);
+		onNetMsg(clientSock, header);*/
+
+
+
+		DataHeader* header = (DataHeader*)szRecv;
+		//std::cout << "b lastPos = " << clientSock->getLastPos() << std::endl;
+		clientSock->setLastPos(clientSock->getLastPos() + nLen);
+		while (clientSock->getLastPos() >= sizeof(DataHeader)) {
+			DataHeader* header = (DataHeader*)clientSock->getMsgBuf();
+			if (clientSock->getLastPos() >= header->dataLength) {
+
+				int  nSize = clientSock->getLastPos() - header->dataLength;
+				//recv(sock, szRecv + sizeof(DataHeader), header->dataLength - sizeof(DataHeader), 0);
+				onNetMsg(clientSock->getSockefd(), header);
+				memcpy(clientSock->getMsgBuf(), clientSock->getMsgBuf() + header->dataLength, nSize);
+
+				clientSock->setLastPos(nSize);
+			}
+			else {
+				break;
+			}
+		}
+
+
+
+
+		//std::cout << "thread end" << std::endl;
+		//delete szRecv;
+
+	}	int onNetMsg(SOCKET clientSock, DataHeader* header) {
+
+		recvCount++;
+		//if (tTime.getElapsedSecond() >= 1.0) {
+		//	std::cout << "time  = " << tTime.getElapsedSecond() << ", socket size = " << client_set.size() << ", recvCount = " << recvCount << std::endl;
+		//	tTime.update();
+		//	recvCount = 0;
+		//}
+		switch (header->cmd) {
+		case CMD_LOGIN:
+		{
+
+
+			Login* login = (Login*)header;
+			//std::cout << "recv data : " << login->cmd << " length = " << login->dataLength << " username = " << login->userName << " password = " << login->passWord << std::endl;
+			LoginResult loginResult;
+
+			//send(cSock, (char*)&header, sizeof(DataHeader), 0);
+			send(clientSock, (char*)&loginResult, sizeof(LoginResult), 0);
+		}
+		break;
+		case CMD_LOGINOUT:
+		{
+
+
+			LoginOut* loginOut = (LoginOut*)header;
+			//std::cout << "recv data : " << loginOut->cmd << " length = " << loginOut->dataLength << " username = " << loginOut->userName << std::endl;
+			LoginOutResult loginOutResult = {};
+			loginOutResult.result = 1;
+
+			send(clientSock, (char*)&loginOutResult, sizeof(LoginOutResult), 0);
+		}
+		break;
+		default:
+		{
+			DataHeader header;
+			header.cmd = CMD_ERR;
+			header.dataLength = 0;
+			send(clientSock, (char*)&header, sizeof(DataHeader), 0);
+
+			std::cout << "switch default" << std::endl;
+		}
+		}
+		return 0;
+	}
+	void closeClient2All() {
+		for (auto it = client_set.begin(); it != client_set.end(); ++it) {
+#ifdef _WIN32
+			closesocket((*it)->getSockefd());
+			delete* it;
+
+#else
+			close((*it)->getSockefd());
+			delete* it;
+#endif
+
+		}
+		client_set.clear();
+	}
+
+	void addClient(ClientSocket* clientSock) {
+		std::lock_guard<std::mutex> lock(s_mutex);
+		//s_mutex.lock();
+		clientsBuf.push_back(clientSock);
+		//s_mutex.unlock();
+	}
+	void start_s() {
+
+		p_thread = new std::thread(&CellServer::onRun, this);
+	}
+	size_t getClientSize() {
+		return client_set.size() + clientsBuf.size();
+	}
+	~CellServer() {
+		closeClient2All();
+		serverSock = INVALID_SOCKET;
+
+	}
+public:
+	static std::atomic_int recvCount;
+private:
+	SOCKET serverSock;
+	std::vector<ClientSocket*> client_set;
+	std::vector<ClientSocket*> clientsBuf;
+	std::thread* p_thread;
+	std::mutex   s_mutex;
+};
+
+std::atomic_int CellServer::recvCount = 0;
+
 class EasyTcpServer {
 
 private:
 	bool run;
 	SOCKET serverSock;
 	std::vector<ClientSocket*> client_set;
+	std::vector<CellServer*> cellServer_set;
+
+	CELLTimestamp tTime;
+
 public:
 	EasyTcpServer() {
 		serverSock = INVALID_SOCKET;
@@ -156,8 +379,18 @@ else {
 	bool isRun() {
 		return run;
 	}
-	int onRun() {
 
+	void start_s() {
+
+		for (int i = 0; i < THREAD_COUNT; i++) {
+			auto ser = new CellServer(serverSock);
+			cellServer_set.push_back(ser);
+			ser->start_s();
+
+		}
+	}
+	int onRun() {
+		time2package();
 		fd_set readFd;
 		fd_set writeFd;
 		fd_set expFd;
@@ -173,11 +406,11 @@ else {
 		}
 		int max_fd = serverSock; // 初始化最大文件描述符为监听socket
 		// 遍历socket_set，更新最大文件描述符
-		for (size_t n = 0; n < client_set.size(); n++) {
-			if (client_set[n]->getSockefd() > max_fd) {
-				max_fd = client_set[n]->getSockefd();
-			}
-		}
+		//for (size_t n = 0; n < client_set.size(); n++) {
+		//	if (client_set[n]->getSockefd() > max_fd) {
+		//		max_fd = client_set[n]->getSockefd();
+		//	}
+		//}
 		timeval t = { 10,0 };
 		int ret = select(max_fd + 1, &readFd, &writeFd, &expFd, &t);
 		if (ret < 0) {
@@ -190,28 +423,28 @@ else {
 			acc();
 
 		}
-	/*	for (auto it = client_set.begin(); it < client_set.end(); it++) {
-			std::cout << "a clientSock lastPost = " << (*it)->getLastPos() << std::endl;
-		}*/
+		/*	for (auto it = client_set.begin(); it < client_set.end(); it++) {
+				std::cout << "a clientSock lastPost = " << (*it)->getLastPos() << std::endl;
+			}*/
 
-		auto it = client_set.begin();
-		while (it != client_set.end()) {
-			if (FD_ISSET((*it)->getSockefd(), &readFd) && -1 == recvData((*it))) {
-		/*		for (auto ita = client_set.begin(); ita < client_set.end(); ita++) {
-					std::cout << "b clientSock lastPost = " << (*ita)->getLastPos() << std::endl;
-				}*/
-				std::cout << "socket = " << *it << "  exit  " << std::endl;
-				delete* it;
-				 it = client_set.erase(it);  // 移除当前元素并更新迭代器
-			/*	 for (auto ita = client_set.begin(); ita < client_set.end(); ita++) {
-					 std::cout << "b clientSock lastPost = " << (*ita)->getLastPos() << std::endl;
-				 }*/
-				
-			}
-			else {
-				++it;  // 移动到下一个元素
-			}
-		}
+			//auto it = client_set.begin();
+			//while (it != client_set.end()) {
+			//	if (FD_ISSET((*it)->getSockefd(), &readFd) && -1 == recvData((*it))) {
+			///*		for (auto ita = client_set.begin(); ita < client_set.end(); ita++) { 
+			//			std::cout << "b clientSock lastPost = " << (*ita)->getLastPos() << std::endl;
+			//		}*/
+			//		std::cout << "socket = " << *it << "  exit  " << std::endl;
+			//		delete* it;
+			//		 it = client_set.erase(it);  // 移除当前元素并更新迭代器
+			//	/*	 for (auto ita = client_set.begin(); ita < client_set.end(); ita++) {
+			//			 std::cout << "b clientSock lastPost = " << (*ita)->getLastPos() << std::endl;
+			//		 }*/
+			//		 
+			//	}
+			//	else {
+			//		++it;  // 移动到下一个元素
+			//	}
+			//}
 
 
 
@@ -239,17 +472,29 @@ else {
 			NewUserJoin newUserJoin = {};
 			send(client_set[n]->getSockefd(), (const char*)&newUserJoin, sizeof(NewUserJoin), 0);
 		}
-		client_set.push_back(new ClientSocket(sock_client));
+		addClientToCellServer(new ClientSocket(sock_client));
 		//for (auto it = client_set.begin(); it < client_set.end(); it++) {
 		//	std::cout << "b clientSock lastPost = " << (*it)->getLastPos() << std::endl;
 		//}
 		return 0;
 
 	}
+
+	void addClientToCellServer(ClientSocket* clientSock) {
+		client_set.push_back(clientSock);
+		CellServer* minCellServer = nullptr;
+		for (auto pCellServer : cellServer_set) {
+			if (!minCellServer || minCellServer->getClientSize() > pCellServer->getClientSize()) {
+				minCellServer = pCellServer;
+			}
+		}
+		minCellServer->addClient(clientSock);
+
+	}
 	int recvData(ClientSocket* clientSock) {
 		//char* szRecv = new char[RECV_BUF_SIZE];
 		//std::cout << "a lastPos = " << clientSock->getLastPos() << std::endl;
-		char szRecv[RECV_BUF_SIZE/10] = {};
+		char szRecv[RECV_BUF_SIZE / 10] = {};
 		int nLen = recv(clientSock->getSockefd(), szRecv, sizeof(szRecv), 0);
 		//std::cout << "c lastPos = " << clientSock->getLastPos() << std::endl;
 		if (nLen <= 0) {
@@ -272,12 +517,12 @@ else {
 		while (clientSock->getLastPos() >= sizeof(DataHeader)) {
 			DataHeader* header = (DataHeader*)clientSock->getMsgBuf();
 			if (clientSock->getLastPos() >= header->dataLength) {
-				
+
 				int  nSize = clientSock->getLastPos() - header->dataLength;
 				//recv(sock, szRecv + sizeof(DataHeader), header->dataLength - sizeof(DataHeader), 0);
-				onNetMsg(clientSock->getSockefd(),header);
+				//onNetMsg(clientSock->getSockefd(), header);
 				memcpy(clientSock->getMsgBuf(), clientSock->getMsgBuf() + header->dataLength, nSize);
-				
+
 				clientSock->setLastPos(nSize);
 			}
 			else {
@@ -288,50 +533,19 @@ else {
 
 
 
-		std::cout << "thread end" << std::endl;
+		//std::cout << "thread end" << std::endl;
 		//delete szRecv;
-	
+
 	}
 
-	int onNetMsg(SOCKET clientSock, DataHeader* header) {
+	void time2package() {
 
 
-		switch (header->cmd) {
-		case CMD_LOGIN:
-		{
-
-
-			Login* login = (Login*)header;
-			std::cout << "recv data : " << login->cmd << " length = " << login->dataLength << " username = " << login->userName << " password = " << login->passWord << std::endl;
-			LoginResult loginResult;
-
-			//send(cSock, (char*)&header, sizeof(DataHeader), 0);
-			send(clientSock, (char*)&loginResult, sizeof(LoginResult), 0);
+		if (tTime.getElapsedSecond() >= 1.0) {
+			std::cout << "time  = " << tTime.getElapsedSecond() << ", socket size = " << client_set.size() << ", recvCount = " << CellServer::recvCount << std::endl;
+			tTime.update();
+			CellServer::recvCount.store(0);
 		}
-		break;
-		case CMD_LOGINOUT:
-		{
-
-
-			LoginOut* loginOut = (LoginOut*)header;
-			std::cout << "recv data : " << loginOut->cmd << " length = " << loginOut->dataLength << " username = " << loginOut->userName << std::endl;
-			LoginOutResult loginOutResult = {};
-			loginOutResult.result = 1;
-
-			send(clientSock, (char*)&loginOutResult, sizeof(LoginOutResult), 0);
-		}
-		break;
-		default:
-		{
-			DataHeader header;
-			header.cmd = CMD_ERR;
-			header.dataLength = 0;
-			send(clientSock, (char*)&header, sizeof(DataHeader), 0);
-
-			std::cout << "switch default" << std::endl;
-		}
-		}
-		return 0;
 	}
 	void closeClient2All() {
 		for (auto it = client_set.begin(); it != client_set.end(); ++it) {
